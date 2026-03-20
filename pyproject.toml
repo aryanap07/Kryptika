@@ -1,0 +1,70 @@
+[build-system]
+requires      = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "kryptika"
+version         = "1.1.0"
+description     = "A complete blockchain implementation in pure Python — SHA-256 block hashing, Proof of Work consensus, ECDSA P-256 signed transactions, live P2P networking, SQLite persistence, and a thread-safe REST node. One dependency. No frameworks."
+readme          = "README.md"
+license         = { file = "LICENSE" }
+requires-python = ">=3.10"
+
+authors = [
+    { name = "Kryptika Contributors" },
+]
+
+dependencies = [
+    "cryptography>=41.0",
+]
+
+keywords = [
+    "blockchain",
+    "cryptocurrency",
+    "proof-of-work",
+    "ecdsa",
+    "p2p",
+    "bitcoin",
+    "educational",
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Education",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+kryptika-node = "kryptika.network.server:main"
+
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["kryptika*"]
+
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+python_files = ["test_*.py"]
+addopts      = "-v --tb=short"
+
+[tool.ruff]
+line-length    = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = []
+
+[tool.ruff.format]
+quote-style  = "double"
+indent-style = "space"
+line-ending  = "auto"

@@ -1,0 +1,168 @@
+# =============================================================================
+# Kryptika — .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Kryptika runtime files
+# -----------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+wallets.json
+wallets.json.tmp
+*.bak
+
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing & coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytestdebug.log
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.virtualenv/
+pyvenv.cfg
+__pypackages__/
+
+# Type checkers & linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Build tools
+.pybuilder/
+target/
+Pipfile.lock
+poetry.lock
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+
+# -----------------------------------------------------------------------------
+# Editors and IDEs
+# -----------------------------------------------------------------------------
+.vscode/
+*.code-workspace
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.netrwhist
+Session.vim
+.vim/
+\#*\#
+.\#*
+.emacs.desktop
+.emacs.desktop.lock
+.spyderproject.db
+.spyproject
+.ropeproject
+.project
+.classpath
+.settings/
+
+
+# -----------------------------------------------------------------------------
+# Operating system files
+# -----------------------------------------------------------------------------
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon?
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+
+# -----------------------------------------------------------------------------
+# Logs and temp files
+# -----------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*.pid
+
+
+# -----------------------------------------------------------------------------
+# Secrets — extra safety net
+# -----------------------------------------------------------------------------
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+credentials.json
+config.local.*
