@@ -37,7 +37,7 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(payload)
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
 
     def _read_json(self):
@@ -251,9 +251,10 @@ class _Handler(BaseHTTPRequestHandler):
 class _ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
     """HTTP server that handles each request in a dedicated thread."""
     daemon_threads = True
+    allow_reuse_address = True
 
 
-def run_server(port: int = 5000, difficulty: int = 3, db_path: str = "chain.db") -> None:
+def run_server(port: int = 5000, difficulty: int = 3, db_path: str = "chain.db", ready_event=None) -> None:
     node       = Node(difficulty=difficulty, db_path=db_path)
     start_time = time.time()
 
@@ -264,6 +265,8 @@ def run_server(port: int = 5000, difficulty: int = 3, db_path: str = "chain.db")
     Handler.start_time = start_time
 
     server = _ThreadingHTTPServer(("", port), Handler)
+    if ready_event is not None:
+        ready_event.set()
 
     W = 49   # inner width
     bar  = "\u2500" * W

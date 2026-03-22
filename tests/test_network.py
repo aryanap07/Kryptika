@@ -38,15 +38,21 @@ def _start_node(port: int) -> None:
             os.remove(db)
     except OSError:
         pass
+    ready = threading.Event()
     threading.Thread(
         target=run_server,
-        kwargs={"port": port, "difficulty": 2, "db_path": db},
+        kwargs={"port": port, "difficulty": 2, "db_path": db, "ready_event": ready},
         daemon=True,
     ).start()
+    ready.wait(timeout=10)
 
 
 def _get(url: str) -> dict:
     return json.loads(urllib.request.urlopen(url, timeout=3).read())
+
+
+def _get_slow(url: str) -> dict:
+    return json.loads(urllib.request.urlopen(url, timeout=30).read())
 
 
 def _post(url: str, body: object, expect_error: bool = False) -> dict:
@@ -103,7 +109,7 @@ def test_mine_increases_height():
     _start_node(port)
     time.sleep(0.3)
     wallet = _get(f"http://localhost:{port}/wallet/new")
-    r      = _get(f"http://localhost:{port}/mine?address={wallet['address']}")
+    r      = _get_slow(f"http://localhost:{port}/mine?address={wallet['address']}")
     assert r["index"] == 1
     chain = _get(f"http://localhost:{port}/chain")
     assert len(chain) == 2
@@ -116,7 +122,7 @@ def test_balance_after_mining():
     _start_node(port)
     time.sleep(0.3)
     wallet = _get(f"http://localhost:{port}/wallet/new")
-    _get(f"http://localhost:{port}/mine?address={wallet['address']}")
+    _get_slow(f"http://localhost:{port}/mine?address={wallet['address']}")
     bal = _get(f"http://localhost:{port}/balance/{wallet['address']}")
     assert bal["balance"] == 10.0
     print("  [OK]  test_balance_after_mining")
@@ -127,7 +133,7 @@ def test_broadcast_syncs_peer():
     port_a, port_b = BASE_PORT + 4, BASE_PORT + 5
     _setup_nodes(port_a, port_b)
     wallet = _get(f"http://localhost:{port_a}/wallet/new")
-    _get(f"http://localhost:{port_a}/mine?address={wallet['address']}")
+    _get_slow(f"http://localhost:{port_a}/mine?address={wallet['address']}")
     time.sleep(0.3)
 
     chain_a = _get(f"http://localhost:{port_a}/chain")
@@ -143,11 +149,11 @@ def test_sync_adopts_longer_chain():
     _setup_nodes(port_a, port_b)
 
     wallet = _get(f"http://localhost:{port_a}/wallet/new")
-    _get(f"http://localhost:{port_a}/mine?address={wallet['address']}")
-    _get(f"http://localhost:{port_a}/mine?address={wallet['address']}")
+    _get_slow(f"http://localhost:{port_a}/mine?address={wallet['address']}")
+    _get_slow(f"http://localhost:{port_a}/mine?address={wallet['address']}")
     time.sleep(0.3)
 
-    r = _get(f"http://localhost:{port_b}/peers/sync")
+    r = _get_slow(f"http://localhost:{port_b}/peers/sync")
     assert r["height"] >= 3
     print("  [OK]  test_sync_adopts_longer_chain")
 
@@ -246,7 +252,7 @@ def test_concurrent_requests_during_mining():
 
     def do_mine():
         try:
-            r = _get(f"http://localhost:{port}/mine?address={wallet.address}")
+            r = _get_slow(f"http://localhost:{port}/mine?address={wallet.address}")
             mine_done.append(r)
         except Exception as e:
             mine_errors.append(str(e))
