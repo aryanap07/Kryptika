@@ -36,7 +36,7 @@ It's for developers who want to stop wondering how blockchains work and just see
 1. [Features](#1-features)
 2. [How It Works](#2-how-it-works)
 3. [Project Structure](#3-project-structure)
-4. [Requirements & Installation](#4-requirements-installation)
+4. [Requirements & Installation](#4-requirements--installation)
 5. [Quick Start](#5-quick-start)
 6. [Running a Node](#6-running-a-node)
 7. [Wallet CLI](#7-wallet-cli)
