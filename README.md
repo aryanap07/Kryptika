@@ -17,7 +17,6 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Version](https://img.shields.io/badge/Version-1.1.0-6C63FF?style=for-the-badge)](https://github.com/aryanap07/Kryptika)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Beta-F59E0B?style=for-the-badge)]()
 <br/>
 
 </div>
