@@ -2,20 +2,28 @@
 wallet_cli.py -- Interactive wallet and transaction manager for Kryptika.
 
 Run from the project root:
-    python wallet_cli.py          (interactive node selection at startup)
-    python wallet_cli.py 5001     (skip selection, connect to localhost:5001)
+    python wallet_cli.py              (interactive node selection at startup)
+    python wallet_cli.py 5001         (skip selection, connect to localhost:5001)
     python wallet_cli.py localhost:5001  (explicit host:port, skip selection)
+    python wallet_cli.py 192.168.1.5:5000  (connect to a remote node directly)
 
 Requires at least one node running:
     python run_node.py 5000
 
 MULTI-NODE QUICK START
 ----------------------
-  Terminal 1:  python run_node.py 5000
-  Terminal 2:  python run_node.py 5001
-  Terminal 3:  python wallet_cli.py 5000
-               -> option 9 (Manage peers) -> add  localhost:5001
-  Now both nodes are peered and will sync chains automatically after mining.
+Terminal 1:  python run_node.py 5000
+Terminal 2:  python run_node.py 5001
+Terminal 3:  python wallet_cli.py 5000
+  -> option 9 (Manage peers) -> add localhost:5001
+
+Now both nodes are peered and will sync chains automatically after mining.
+
+REMOTE NODE DISCOVERY
+---------------------
+Known remote peers are saved to peers.json automatically when you add them
+via option 9. On the next startup they will be scanned alongside localhost
+ports, so you no longer need to re-enter remote addresses manually.
 """
 
 import json
@@ -24,20 +32,67 @@ import sys
 import datetime
 import urllib.request
 import urllib.error
+
 from kryptika.core import Wallet, Transaction
 from kryptika.storage import SQLiteStorage
 
 # -------------------------------------------------------------------------
 # Config
 # -------------------------------------------------------------------------
-WALLETS_FILE = "wallets.json"
-DEFAULT_FEE  = Transaction.DEFAULT_FEE
 
-_PROBE_PORTS = list(range(5000, 5011))   # ports 5000-5010 scanned at startup
+WALLETS_FILE  = "wallets.json"
+PEERS_FILE    = "peers.json"          # <-- NEW: persisted remote peer list
+DEFAULT_FEE   = Transaction.DEFAULT_FEE
+_PROBE_PORTS  = list(range(5000, 5011))  # localhost:5000-5010 scanned at startup
 
-NODE: str    # set by select_node()
-DB:   str    # set by select_node()
+NODE: str   # set by select_node()
+DB:   str   # set by select_node()
 
+
+# -------------------------------------------------------------------------
+# NEW: peers.json helpers
+# -------------------------------------------------------------------------
+
+def load_saved_peers() -> list[str]:
+    """
+    Return the list of host:port strings previously saved in peers.json.
+    These are remote (non-localhost) nodes the user has connected to before.
+    """
+    if not os.path.exists(PEERS_FILE):
+        return []
+    try:
+        with open(PEERS_FILE) as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return [str(p) for p in data]
+    except (json.JSONDecodeError, ValueError):
+        pass
+    return []
+
+
+def save_peer(host_port: str) -> None:
+    """
+    Persist host_port into peers.json so it is auto-scanned next startup.
+    localhost entries are intentionally excluded — they are already covered
+    by _PROBE_PORTS.
+    """
+    # Don't bother saving localhost entries
+    host = host_port.split(":")[0].lower()
+    if host in ("localhost", "127.0.0.1", ""):
+        return
+
+    peers = load_saved_peers()
+    if host_port not in peers:
+        peers.append(host_port)
+        tmp = PEERS_FILE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(peers, f, indent=2)
+        os.replace(tmp, PEERS_FILE)   # atomic write — same pattern as wallets
+
+
+# -------------------------------------------------------------------------
+# Node probing
+# -------------------------------------------------------------------------
 
 def _probe_node(host_port: str) -> dict | None:
     """Return /status dict if the node is reachable, else None."""
@@ -59,13 +114,20 @@ def _parse_arg(arg: str) -> str:
     return arg
 
 
+# -------------------------------------------------------------------------
+# Node selection  (CHANGED: now also scans saved remote peers)
+# -------------------------------------------------------------------------
+
 def select_node() -> None:
     """
     Determine which node to connect to.
 
     Priority:
       1. If a CLI argument was given, use it directly (no prompt).
-      2. Otherwise scan _PROBE_PORTS, show what's running, and ask the user.
+      2. Otherwise build a candidate list from:
+           a. localhost:5000-5010  (always)
+           b. any host:port saved in peers.json  (NEW)
+         Probe all candidates, show what's reachable, and ask the user.
     """
     global NODE, DB
 
@@ -77,25 +139,35 @@ def select_node() -> None:
         DB   = f"chain_{port_part}.db"
         return
 
+    # -- Build candidate list: localhost ports + saved remote peers -------
+    candidates: list[str] = [f"localhost:{p}" for p in _PROBE_PORTS]
+
+    saved_remote = load_saved_peers()          # NEW
+    for peer in saved_remote:
+        if peer not in candidates:
+            candidates.append(peer)
+
     # -- Auto-discover running nodes -------------------------------------
     print()
     line("=")
-    print("    Kryptika Wallet CLI  --  Node Selection")
+    print(" Kryptika Wallet CLI  -  Node Selection")
     line("=")
-    print("  Scanning for running nodes...\n")
+    print(" Scanning for running nodes...\n")
 
-    found: list[tuple[str, dict]] = []   # [(host_port, status_dict), ...]
-    for port in _PROBE_PORTS:
-        hp     = f"localhost:{port}"
+    found: list[tuple[str, dict]] = []  # [(host_port, status_dict), ...]
+
+    for hp in candidates:
         status = _probe_node(hp)
         if status:
             found.append((hp, status))
-            print(f"  [{len(found)}] {hp}   height={status['height']}  "
+            tag = " (remote)" if hp in saved_remote else ""
+            print(f"  [{len(found)}] {hp}{tag}  "
+                  f"height={status['height']}  "
                   f"peers={len(status.get('peers', []))}  "
                   f"mempool={status['mempool']}")
 
     if not found:
-        print("  No nodes found on default ports.")
+        print("  No nodes found on default ports or saved peers.")
 
     print(f"\n  [c] Enter a custom address")
     if found:
@@ -107,16 +179,16 @@ def select_node() -> None:
                        f" (Enter for [1])" if found else ""
         raw = input(f"  Select node{default_hint}: ").strip()
 
-        # Default: first found node
         if raw == "" and found:
             raw = "1"
 
         if raw.lower() == "c" or (raw == "" and not found):
-            custom = input("  Enter host:port or port (e.g. localhost:5001 or 5001): ").strip()
+            custom = input("  Enter host:port or port (e.g. 192.168.1.5:5000 or 5001): ").strip()
             if not custom:
                 print("  Cancelled -- using localhost:5000.")
                 custom = "5000"
             host_port = _parse_arg(custom)
+            save_peer(host_port)               # NEW: persist remote for next time
             break
 
         if raw.isdigit() and 1 <= int(raw) <= len(found):
@@ -128,7 +200,7 @@ def select_node() -> None:
     NODE = f"http://{host_port}"
     port_part = host_port.split(":")[-1]
     DB   = f"chain_{port_part}.db"
-    print(f"\n  Connected to {NODE}   (DB: {DB})\n")
+    print(f"\n  Connected to {NODE}  (DB: {DB})\n")
 
 
 # =========================================================================
@@ -239,12 +311,10 @@ def create_wallet(wallets_data: dict, storage: SQLiteStorage) -> None:
     if name in wallets_data:
         print(f"  Wallet '{name}' already exists.")
         return
-
     wallet = Wallet(name=name)
     wallets_data[name] = wallet_to_data(wallet)
     save_local_wallets(wallets_data)
     storage.save_wallet(wallet)
-
     print(f"\n  Wallet '{name}' created.")
     print(f"  Address : {wallet.address}")
     print(f"  Saved to {WALLETS_FILE}")
@@ -255,18 +325,16 @@ def check_balance(wallets_data: dict) -> None:
     if not wallets_data:
         print("  No wallets yet. Create one first.")
         return
-
     r = get(f"{NODE}/status")
     if r:
-        print(f"  Node height: {r['height']}   mempool: {r['mempool']} pending\n")
-
-    print(f"  {'Name':<14} {'Balance':>10}   Address")
+        print(f"  Node height: {r['height']}  mempool: {r['mempool']} pending\n")
+    print(f"  {'Name':<14} {'Balance':>10}  Address")
     line()
     for name, data in wallets_data.items():
         r       = get(f"{NODE}/balance/{data['address']}")
         balance = r["balance"] if r and "balance" in r else "?"
         short   = data["address"][:32] + "..."
-        print(f"  {name:<14} {str(balance):>10}   {short}")
+        print(f"  {name:<14} {str(balance):>10}  {short}")
 
 
 def mine_coins(wallets_data: dict) -> None:
@@ -274,42 +342,35 @@ def mine_coins(wallets_data: dict) -> None:
     if not wallets_data:
         print("  No wallets yet. Create one first.")
         return
-
-    # Show pending tx count
     r = get(f"{NODE}/transactions/pending")
     if r:
         print(f"  Pending transactions in mempool: {r['count']}")
         if r["count"] > 0:
             fee_sum = sum(tx.get("fee", 0) for tx in r["transactions"])
-            print(f"  Total fees you will earn:        {fee_sum:.4f} coins")
-        print()
-
+            print(f"  Total fees you will earn: {fee_sum:.4f} coins")
+    print()
     names = list(wallets_data.keys())
     print("  Your wallets:")
     for i, name in enumerate(names, 1):
         print(f"    {i}. {name}")
-
     choice = input("\n  Pick wallet to receive reward (number or name): ").strip()
     name   = resolve_wallet(choice, names, wallets_data)
     if name is None:
         return
-
     address = wallets_data[name]["address"]
     print(f"\n  Mining... reward goes to '{name}'")
-
     r = get(f"{NODE}/mine?address={address}")
     if r is None:
         return
     if "error" in r:
         print(f"  Error: {r['error']}")
         return
-
     print(f"  Block #{r['index']} mined!  nonce={r['nonce']}")
     print(f"  Transactions confirmed : {r['transactions']}")
-    print(f"  Miner reward           : {r.get('miner_reward', 0):.4f} coins")
+    print(f"  Miner reward          : {r.get('miner_reward', 0):.4f} coins")
     r2 = get(f"{NODE}/balance/{address}")
     if r2:
-        print(f"  '{name}' new balance    : {r2['balance']} coins")
+        print(f"  '{name}' new balance   : {r2['balance']} coins")
 
 
 def send_coins(wallets_data: dict) -> None:
@@ -317,12 +378,9 @@ def send_coins(wallets_data: dict) -> None:
     if not wallets_data:
         print("  No wallets yet. Create one first.")
         return
-
-    names = list(wallets_data.keys())
-
-    # Sender selection with balances
-    print("  Your wallets:")
+    names    = list(wallets_data.keys())
     balances = {}
+    print("  Your wallets:")
     for i, name in enumerate(names, 1):
         r              = get(f"{NODE}/balance/{wallets_data[name]['address']}")
         balances[name] = r["balance"] if r and "balance" in r else 0.0
@@ -335,11 +393,10 @@ def send_coins(wallets_data: dict) -> None:
     if sender_name is None:
         return
 
-    # Recipient selection
     print("\n  Recipient wallets:")
     for i, name in enumerate(names, 1):
         print(f"    {i}. {name}")
-    print("    (or paste any external address)")
+    print("  (or paste any external address)")
 
     recipient_input = input("\n  Recipient (number, name, or address): ").strip()
     if not recipient_input:
@@ -362,7 +419,6 @@ def send_coins(wallets_data: dict) -> None:
             print("  Cancelled.")
             return
 
-    # Amount
     amount_str = input("  Amount to send: ").strip()
     try:
         amount = float(amount_str)
@@ -372,7 +428,6 @@ def send_coins(wallets_data: dict) -> None:
         print("  Invalid amount -- must be a positive number.")
         return
 
-    # Gas fee
     print(f"\n  Gas fee (default {DEFAULT_FEE} coins, press Enter to use default): ", end="")
     fee_str = input().strip()
     if fee_str == "":
@@ -391,15 +446,13 @@ def send_coins(wallets_data: dict) -> None:
     if sender_balance < total_cost:
         print(f"\n  Insufficient funds:")
         print(f"    Balance : {sender_balance} coins")
-        print(f"    Need    : {total_cost} coins  ({amount} + {fee} fee)")
+        print(f"    Need    : {total_cost} coins ({amount} + {fee} fee)")
         return
 
-    # Note
     note = input("  Note (press Enter to skip): ").strip()
     if not note:
         note = f"{sender_name} -> {recipient_name}"
 
-    # Confirm
     print(f"\n  Summary:")
     print(f"    From      : {sender_name}")
     print(f"    To        : {recipient_name}")
@@ -407,6 +460,7 @@ def send_coins(wallets_data: dict) -> None:
     print(f"    Gas fee   : {fee} coins")
     print(f"    Total out : {total_cost} coins")
     print(f"    Note      : {note}")
+
     if input("\n  Confirm? (y/n): ").strip().lower() != "y":
         print("  Cancelled.")
         return
@@ -425,7 +479,7 @@ def send_coins(wallets_data: dict) -> None:
         print(f"\n  Transaction rejected: {r['error']}")
         return
     print(f"\n  {r['message']}")
-    print(f"  Amount : {r['amount']} coins   Fee : {r.get('fee', 0)} coins")
+    print(f"  Amount : {r['amount']} coins  Fee : {r.get('fee', 0)} coins")
     print("  Mine a block to confirm it.")
 
 
@@ -434,9 +488,7 @@ def view_chain(storage: SQLiteStorage) -> None:
     chain = get(f"{NODE}/chain")
     if chain is None:
         return
-
     names = storage.load_wallets()
-
     for block in chain:
         ts = fmt_time(block["timestamp"])
         print(f"\n  Block #{block['index']}  [{ts}]  nonce={block['nonce']}")
@@ -450,7 +502,6 @@ def view_chain(storage: SQLiteStorage) -> None:
             fee_str   = f"  fee={tx.get('fee', 0)}" if tx.get("fee") else ""
             note_str  = f"  [{tx['note']}]"         if tx.get("note") else ""
             print(f"    {sender:<14} -> {recipient:<14}  {tx['amount']} coins{fee_str}{note_str}")
-
     print(f"\n  Total blocks: {len(chain)}")
 
 
@@ -462,15 +513,14 @@ def view_pending(storage: SQLiteStorage) -> None:
     if r["count"] == 0:
         print("  No pending transactions.")
         return
-
-    names = storage.load_wallets()
+    names     = storage.load_wallets()
     fee_total = sum(tx.get("fee", 0) for tx in r["transactions"])
-    print(f"  {r['count']} pending   (total fees: {fee_total:.4f} coins)")
+    print(f"  {r['count']} pending  (total fees: {fee_total:.4f} coins)")
     line()
     for tx in r["transactions"]:
         sender    = storage.resolve_name(tx["sender"],    names)
         recipient = storage.resolve_name(tx["recipient"], names)
-        note_str  = f"  [{tx['note']}]" if tx.get("note") else ""
+        note_str  = f"  [{tx['note']}]"   if tx.get("note") else ""
         fee_str   = f"  fee={tx.get('fee', 0)}"
         print(f"  {sender:<14} -> {recipient:<14}  {tx['amount']} coins{fee_str}{note_str}")
 
@@ -480,15 +530,13 @@ def view_history(wallets_data: dict, storage: SQLiteStorage) -> None:
     if not wallets_data:
         print("  No wallets yet.")
         return
-
     names_list = list(wallets_data.keys())
     print("  Wallets:")
     for i, name in enumerate(names_list, 1):
         print(f"    {i}. {name}")
-    print("    (or paste any external address)")
+    print("  (or paste any external address)")
 
     choice = input("\n  View history for (number, name, or address): ").strip()
-
     if choice.isdigit() and 1 <= int(choice) <= len(names_list):
         address = wallets_data[names_list[int(choice) - 1]]["address"]
         label   = names_list[int(choice) - 1]
@@ -502,71 +550,62 @@ def view_history(wallets_data: dict, storage: SQLiteStorage) -> None:
     r = get(f"{NODE}/history/{address}")
     if r is None:
         return
-
     names = storage.load_wallets()
-
     print(f"\n  History for: {label}")
     print(f"  Address    : {address[:40]}...")
     print(f"  Total txns : {r['count']}")
     line()
-
     if r["count"] == 0:
         print("  No transactions found.")
         return
 
     running_balance = 0.0
     TYPE_ICONS = {
-        "mining_reward": "▶  REWARD  ",
-        "sent":          "↑  SENT    ",
-        "received":      "↓  RECEIVED",
+        "mining_reward": "▶ REWARD  ",
+        "sent":          "↑ SENT   ",
+        "received":      "↓ RECEIVED",
     }
-
     for tx in r["history"]:
         ts        = fmt_time(tx["timestamp"])
         sender    = storage.resolve_name(tx["sender"],    names)
         recipient = storage.resolve_name(tx["recipient"], names)
-        icon      = TYPE_ICONS.get(tx["type"], "?  OTHER   ")
+        icon      = TYPE_ICONS.get(tx["type"], "? OTHER  ")
         fee_str   = f"  fee={tx['fee']:.4f}" if tx.get("fee") else ""
-        note_str  = f"  [{tx['note']}]"       if tx.get("note") else ""
+        note_str  = f"  [{tx['note']}]"      if tx.get("note") else ""
 
-        # Running balance
-        if tx["type"] == "received" or tx["type"] == "mining_reward":
+        if tx["type"] in ("received", "mining_reward"):
             running_balance += tx["amount"]
             delta = f"+{tx['amount']}"
-        else:  # sent
+        else:
             running_balance -= (tx["amount"] + tx.get("fee", 0))
             delta = f"-{tx['amount'] + tx.get('fee', 0):.4f}"
 
         print(f"\n  Block #{tx['block']:<4}  {ts}")
-        print(f"  {icon}   {delta:>12} coins   (balance: {running_balance:.4f})")
+        print(f"  {icon}  {delta:>12} coins  (balance: {running_balance:.4f})")
         print(f"  From: {sender:<16}  To: {recipient:<16}{fee_str}{note_str}")
 
 
 def manage_peers() -> None:
     header("Manage Peers (Multi-Node)")
-
     r = get(f"{NODE}/status")
     if r is None:
         return
-
-    print(f"  This node: {NODE}")
-    print(f"  Height   : {r['height']}")
+    print(f"  This node : {NODE}")
+    print(f"  Height    : {r['height']}")
     peers = r.get("peers", [])
-    print(f"  Peers    : {len(peers)}")
+    print(f"  Peers     : {len(peers)}")
     for p in peers:
         print(f"    - {p}")
-
     print()
     line()
     print("  1. Add a peer")
     print("  2. Sync with peers (adopt longest valid chain)")
     print("  3. Back")
     line()
-
     choice = input("  Choose: ").strip()
 
     if choice == "1":
-        addr = input("  Peer address (e.g. localhost:5001): ").strip()
+        addr = input("  Peer address (e.g. 192.168.1.5:5001 or localhost:5001): ").strip()
         if not addr:
             print("  Cancelled.")
             return
@@ -574,13 +613,15 @@ def manage_peers() -> None:
         if r and "error" not in r:
             print(f"\n  Peer added. Known peers: {r['peers']}")
 
-            # Register ourselves on the other node using our actual host:port
+            save_peer(addr)            # NEW: persist remote peers to peers.json
+            if addr in load_saved_peers():
+                print(f"  Saved {addr} to {PEERS_FILE} — will auto-scan next startup.")
+
             my_host_port = NODE.replace("http://", "")
             r2 = post(f"http://{addr}/peers/add", {"address": my_host_port})
             if r2 and "error" not in r2:
                 print(f"  Also registered this node on {addr}.")
 
-            # Auto-sync immediately after adding a peer
             print(f"\n  Auto-syncing with {addr}...")
             _do_sync(show_header=False)
         elif r:
@@ -592,26 +633,22 @@ def manage_peers() -> None:
 
 def _do_sync(show_header: bool = True) -> None:
     """Pull the longest chain from all known peers."""
-    # Get height before sync so we can show a meaningful diff
     status_before = get(f"{NODE}/status")
     height_before = status_before["height"] if status_before else "?"
-
     r = get(f"{NODE}/peers/sync")
     if r is None:
         return
-
-    replaced = r.get("replaced", False)
+    replaced     = r.get("replaced", False)
     height_after = r["height"]
-
     if replaced:
-        print(f"  ✓  Chain updated!  {height_before} → {height_after} blocks")
-        print(f"     Your node has adopted the longest valid chain from its peers.")
+        print(f"  ✓ Chain updated!  {height_before} → {height_after} blocks")
+        print(f"  Your node has adopted the longest valid chain from its peers.")
     else:
         if height_before == height_after:
-            print(f"  ✓  Already up to date (height={height_after}).")
-            print(f"     Make sure the peer has mined blocks before syncing.")
+            print(f"  ✓ Already up to date (height={height_after}).")
+            print(f"  Make sure the peer has mined blocks before syncing.")
         else:
-            print(f"  ✓  Already on the longest chain (height={height_after}).")
+            print(f"  ✓ Already on the longest chain (height={height_after}).")
 
 
 def node_status() -> None:
@@ -629,6 +666,13 @@ def node_status() -> None:
     for p in peers:
         print(f"    - {p}")
 
+    # NEW: show saved remote peers from peers.json
+    saved = load_saved_peers()
+    if saved:
+        print(f"\n  Saved remote peers ({PEERS_FILE}):")
+        for p in saved:
+            print(f"    - {p}")
+
 
 # =========================================================================
 # Main loop
@@ -636,11 +680,10 @@ def node_status() -> None:
 
 def main() -> None:
     select_node()
-
     print()
     line("=")
-    print("    Kryptika Wallet CLI")
-    print(f"    Node : {NODE}   DB : {DB}")
+    print("  Kryptika Wallet CLI")
+    print(f"  Node : {NODE}   DB : {DB}")
     line("=")
 
     wallets_data = load_local_wallets()
@@ -665,7 +708,6 @@ def main() -> None:
         for key, label in MENU:
             print(f"  {key}. {label}")
         line()
-
         choice = input("  Choose: ").strip()
 
         if   choice == "1": create_wallet(wallets_data, storage)
