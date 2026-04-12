@@ -704,7 +704,7 @@ elif page == "Send":
         recipient = st.text_input("Recipient address", placeholder="64-character hex", key="send_to_ui")
         amount    = st.number_input("Amount (KRY)", min_value=0.00000001, value=float(st.session_state.send_amt_ui), step=0.1, format="%.8f", key="send_amt_ui")
         fee       = st.number_input("Fee (KRY)", min_value=0.0, value=float(st.session_state.send_fee_ui), step=0.01, format="%.8f", key="send_fee_ui")
-        note      = st.text_input("Note (optional)", value=st.session_state.send_note_ui, placeholder="what is this for?", key="send_note_ui").strip()
+        note      = st.text_input("Note (optional)", placeholder="what is this for?", key="send_note_ui").strip()
 
     with col_info:
         st.markdown('<div class="sh">Transaction Summary</div>', unsafe_allow_html=True)
@@ -751,11 +751,6 @@ elif page == "Send":
                     st.session_state.last_tx_id = tx.tx_id
                     st.success("Transaction broadcast to node!")
                     st.markdown(f'<div class="hash-box" style="font-size:0.65rem;">TX ID: {tx.tx_id}</div>', unsafe_allow_html=True)
-                    st.session_state.send_to_ui = ""
-                    st.session_state.send_amt_ui = 1.0
-                    st.session_state.send_fee_ui = 0.2
-                    st.session_state.send_note_ui = ""
-                    st.rerun()
             except Exception as exc:
                 st.error(f"Signing failed: {exc}")
 
