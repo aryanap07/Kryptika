@@ -8,7 +8,6 @@ import streamlit.components.v1 as components
 import plotly.graph_objects as go
 from kryptika.core.transaction import Wallet, Transaction
 
-# ── Application Configuration ──────────────────────────────────────────────────
 st.set_page_config(
     page_title="KRYPTIKA",
     page_icon="⬡",
@@ -16,7 +15,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Minified Core CSS ──────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -137,7 +135,7 @@ label, .stTextInput label, .stSelectbox label, .stNumberInput label { font-famil
 .stWarning > div { background: var(--amber-dim) !important; border: 1px solid rgba(245,158,11,0.3) !important; color: #B45309 !important; font-family: var(--mono) !important; font-size: 0.8rem !important; border-radius: var(--r) !important; word-break: break-word; }
 
 .stTabs [data-baseweb="tab-list"] { background: transparent !important; border-bottom: 2px solid var(--border) !important; gap: 24px !important; }
-.stTabs [data-baseweb="tab"] { background: transparent !important; color: var(--txt-3) !important; font-family: var(--head) !important; font-size: 0.8rem !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; border: none !important; border-bottom: 2px solid transparent !important; border-radius: 0 !important; padding: 12px 0 !important; font-weight: 700 !important; margin-bottom: -2px !important; }
+.stTabs [data-baseweb="tab"] { background: transparent !important; color: var(--txt-3) !important; font-family: var(--head) !important; font-size: 0.8rem !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; border: none !important; border-bottom: 2px transparent !important; border-radius: 0 !important; padding: 12px 0 !important; font-weight: 700 !important; margin-bottom: -2px !important; }
 .stTabs [aria-selected="true"] { color: var(--cyan) !important; border-bottom-color: var(--cyan) !important; }
 
 .streamlit-expanderHeader { background: var(--bg) !important; border: 1px solid var(--border) !important; border-radius: var(--r) !important; font-family: var(--mono) !important; font-size: 0.8rem !important; color: var(--txt-1) !important; font-weight: 500 !important; }
@@ -382,7 +380,7 @@ if page == "Overview":
             last_block = blocks[-1]
             lh = last_block.get("hash", "---")
             lt = ts(last_block.get("timestamp", 0))
-            st.markdown(f'<div class="note-txt" style="margin:8px 0 24px">Latest block: <span style="color:var(--cyan);font-weight:600;word-break:break-all;">{lh[:32]}…{lh[-8:]}</span> &nbsp;·&nbsp; {lt}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="note-txt" style="margin:8px 0 24px">Latest block: <span class="hash-txt" style="color:var(--cyan);font-weight:600;font-size:0.65rem;">{lh}</span> &nbsp;·&nbsp; {lt}</div>', unsafe_allow_html=True)
 
         col_chart1, col_chart2 = st.columns([3, 2])
 
@@ -493,10 +491,10 @@ elif page == "Chain Explorer":
                 col1, col2 = st.columns(2)
                 with col1:
                     st.markdown('<div class="tlabel">Block Hash</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="hash-txt" style="color:var(--cyan)">{bh}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="hash-txt" style="color:var(--cyan); font-size:0.65rem;">{bh}</div>', unsafe_allow_html=True)
                 with col2:
                     st.markdown('<div class="tlabel">Previous Hash</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="hash-txt">{block.get("prev_hash", "---")}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="hash-txt" style="font-size:0.65rem;">{block.get("prev_hash", "---")}</div>', unsafe_allow_html=True)
 
                 mc1, mc2, mc3 = st.columns(3)
                 mc1.markdown(f'<div class="tlabel" style="margin-top:16px">Nonce</div><div style="color:var(--txt-1);font-size:1rem;font-weight:700">{nonce}</div>', unsafe_allow_html=True)
@@ -514,7 +512,7 @@ elif page == "Chain Explorer":
                         is_cb     = (sender == "COINBASE")
                         typ_cls   = "b-reward" if is_cb else "b-recv"
                         typ_lbl   = "COINBASE" if is_cb else "TRANSFER"
-                        st.markdown(f'<div class="trow"><span class="badge {typ_cls}">{typ_lbl}</span><span class="tx-addr">{short(sender, 10)}</span><span class="tx-arrow">→</span><span class="tx-addr">{short(recipient, 10)}</span><span class="tx-amount">{fmt(amount)} KRY</span><span class="tx-fee">fee {fmt(fee)}</span></div>' + (f'<div class="note-txt" style="padding-left:96px; word-break:break-all;">"{note}"</div>' if note else ""), unsafe_allow_html=True)
+                        st.markdown(f'<div class="trow"><span class="badge {typ_cls}">{typ_lbl}</span><span class="tx-addr" style="font-size:0.65rem;">{sender}</span><span class="tx-arrow">→</span><span class="tx-addr" style="font-size:0.65rem;">{recipient}</span><span class="tx-amount">{fmt(amount)} KRY</span><span class="tx-fee">fee {fmt(fee)}</span></div>' + (f'<div class="note-txt" style="padding-left:96px; word-break:break-all; font-size:0.65rem;">"{note}"</div>' if note else ""), unsafe_allow_html=True)
         if len(filtered) > 100:
             st.markdown('<div class="note-txt" style="text-align:center;margin-top:16px;">(Showing last 100 matched blocks to prevent browser lag)</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -547,7 +545,7 @@ elif page == "Mempool":
         else:
             st.markdown('<div class="col-hdr t"><span>Type</span><span>Sender</span><span></span><span>Recipient</span><span style="text-align:right">Amount</span><span style="text-align:right">Fee</span></div>', unsafe_allow_html=True)
             for tx in txs:
-                st.markdown(f'<div class="trow"><span class="badge b-pend">PENDING</span><span class="tx-addr">{short(tx.get("sender","---"), 10)}</span><span class="tx-arrow">→</span><span class="tx-addr">{short(tx.get("recipient","---"), 10)}</span><span class="tx-amount">{fmt(tx.get("amount",0))} KRY</span><span class="tx-fee">{fmt(tx.get("fee",0))}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="trow"><span class="badge b-pend">PENDING</span><span class="tx-addr" style="font-size:0.65rem;">{tx.get("sender","---")}</span><span class="tx-arrow">→</span><span class="tx-addr" style="font-size:0.65rem;">{tx.get("recipient","---")}</span><span class="tx-amount">{fmt(tx.get("amount",0))} KRY</span><span class="tx-fee">{fmt(tx.get("fee",0))}</span></div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif page == "Wallet":
@@ -570,10 +568,10 @@ elif page == "Wallet":
                 balance   = fmt(bal_data.get("balance", 0)) if not bal_err else "?"
                 is_active = (st.session_state.active_wallet == name)
 
-                st.markdown(f'<div class="wcard {"active" if is_active else ""}">' + ('<div class="wcard-badge">ACTIVE</div>' if is_active else "") + f'<div class="wcard-name">{name}</div><div class="wcard-addr">{addr}</div><div class="wcard-balance">{balance}<span class="wcard-unit">KRY</span></div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="wcard {"active" if is_active else ""}">' + ('<div class="wcard-badge">DEFAULT</div>' if is_active else "") + f'<div class="wcard-name">{name}</div><div class="wcard-addr" style="font-size:0.65rem;">{addr}</div><div class="wcard-balance">{balance}<span class="wcard-unit">KRY</span></div></div>', unsafe_allow_html=True)
 
                 ba, bb, bc, _ = st.columns([1, 1, 1, 3])
-                if ba.button("Set Active", key=f"act_{name}"):
+                if ba.button("Make Default", key=f"act_{name}"):
                     st.session_state.active_wallet = name
                     _save_db(st.session_state.wallets, st.session_state.active_wallet)
                     st.rerun()
@@ -682,7 +680,7 @@ elif page == "Wallet":
                         blk   = tx.get("block", "?")
                         stamp = ts_short(tx.get("timestamp", 0))
                         plus  = delta.startswith("+")
-                        st.markdown(f'<div class="trow" style="grid-template-columns:80px 1fr 20px 1fr 90px 90px 80px"><span class="badge {typ_cls}">{typ_lbl}</span><span class="tx-addr">{short(tx.get("sender","---"), 8)}</span><span class="tx-arrow">→</span><span class="tx-addr">{short(tx.get("recipient","---"), 8)}</span><span class="tx-amount" style="color:{"var(--green-dk)" if plus else "var(--red)"}">{delta}</span><span class="tx-fee">bal {fmt(bal)}</span><span class="tx-fee">#{blk} {stamp}</span></div>' + (f'<div class="note-txt" style="padding:0 0 8px 104px; word-break:break-all;">"{note}"</div>' if note else ""), unsafe_allow_html=True)
+                        st.markdown(f'<div class="trow" style="grid-template-columns:80px 1fr 20px 1fr 90px 90px 80px"><span class="badge {typ_cls}">{typ_lbl}</span><span class="tx-addr" style="font-size:0.65rem;">{tx.get("sender","---")}</span><span class="tx-arrow">→</span><span class="tx-addr" style="font-size:0.65rem;">{tx.get("recipient","---")}</span><span class="tx-amount" style="color:{"var(--green-dk)" if plus else "var(--red)"}">{delta}</span><span class="tx-fee">bal {fmt(bal)}</span><span class="tx-fee">#{blk} {stamp}</span></div>' + (f'<div class="note-txt" style="padding:0 0 8px 104px; word-break:break-all; font-size:0.65rem;">"{note}"</div>' if note else ""), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif page == "Send":
@@ -709,7 +707,7 @@ elif page == "Send":
         recipient = st.text_input("Recipient address", value=st.session_state.send_to_ui, placeholder="64-character hex", key="send_to_ui")
         amount    = st.number_input("Amount (KRY)", min_value=0.00000001, value=float(st.session_state.send_amt_ui), step=0.1, format="%.8f", key="send_amt_ui")
         fee       = st.number_input("Fee (KRY)", min_value=0.0, value=float(st.session_state.send_fee_ui), step=0.01, format="%.8f", key="send_fee_ui")
-        note      = str(st.text_input("Note (optional)", value=st.session_state.send_note_ui, placeholder="what is this for?", key="send_note_ui")).strip()
+        note      = st.text_input("Note (optional)", value=st.session_state.send_note_ui, placeholder="what is this for?", key="send_note_ui").strip()
 
     with col_info:
         st.markdown('<div class="sh">Transaction Summary</div>', unsafe_allow_html=True)
@@ -755,7 +753,7 @@ elif page == "Send":
                 else:
                     st.session_state.last_tx_id = tx.tx_id
                     st.success("Transaction broadcast to node!")
-                    st.markdown(f'<div class="hash-box">TX ID: {tx.tx_id}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="hash-box" style="font-size:0.65rem;">TX ID: {tx.tx_id}</div>', unsafe_allow_html=True)
                     st.session_state.send_to_ui = ""
                     st.session_state.send_amt_ui = 1.0
                     st.session_state.send_fee_ui = 0.2
@@ -765,7 +763,7 @@ elif page == "Send":
                 st.error(f"Signing failed: {exc}")
 
     if st.session_state.last_tx_id:
-        st.markdown(f'<div class="note-txt" style="margin-top:16px;font-weight:500">Last tx: <span style="color:var(--txt-1)">{short(st.session_state.last_tx_id, 12)}</span> — mine a block to confirm.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="note-txt" style="margin-top:16px;font-weight:500">Last tx: <span class="hash-txt" style="color:var(--txt-1); font-size:0.65rem;">{st.session_state.last_tx_id}</span> — mine a block to confirm.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 elif page == "Mine":
@@ -834,7 +832,7 @@ elif page == "Mine":
               <div class="rrow"><span class="rkey">Nonce Found</span><span class="rval" style="color:var(--txt-1)">{f"{nonce:,}" if isinstance(nonce, int) else nonce}</span></div>
               <div class="rrow"><span class="rkey">Miner Reward</span><span class="rval" style="color:var(--green-dk)">{fmt(reward)} KRY</span></div>
             </div>
-            <div class="hash-box" style="margin-top:12px">{bh}</div>
+            <div class="hash-box" style="margin-top:12px; font-size:0.65rem;">{bh}</div>
             """, unsafe_allow_html=True)
         else:
             st.markdown('<div style="padding:60px;text-align:center;color:var(--txt-4);font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:600">— No blocks mined this session —</div>', unsafe_allow_html=True)
@@ -863,20 +861,29 @@ elif page == "Peers":
             st.markdown('<div style="padding:50px;text-align:center;color:var(--txt-4);font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:600">— No peers connected —</div>', unsafe_allow_html=True)
         else:
             for peer in peers:
-                st.markdown(f'<div class="peer-row"><span class="peer-dot">●</span><span class="peer-addr">{peer}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="peer-row"><span class="peer-dot">●</span><span class="peer-addr" style="font-size:0.65rem;">{peer}</span></div>', unsafe_allow_html=True)
 
     st.markdown('<div class="sh" style="margin-top:32px">Manage Peers</div>', unsafe_allow_html=True)
     col_add, col_sync = st.columns(2)
 
     with col_add:
-        new_peer = st.text_input("Add peer address", placeholder="localhost:5001", key="new_peer")
+        new_peer = st.text_input("Add peer address", placeholder="http://localhost:5001", key="new_peer")
         if st.button("Add Peer", key="btn_add_peer"):
-            if not new_peer.strip(): st.error("Enter an address.")
+            target_peer = new_peer.strip()
+            if not target_peer: st.error("Enter an address.")
             else:
-                result, err = api("POST", "/peers/add", {"address": new_peer.strip()})
-                if err: st.error(f"Failed: {err}")
+                if not target_peer.startswith("http"): target_peer = "http://" + target_peer
+                target_peer = target_peer.rstrip("/")
+                local_node = st.session_state.node_url
+
+                result, err = api("POST", "/peers/add", {"address": target_peer})
+                if err: st.error(f"Local addition failed: {err}")
                 else:
-                    st.success(f"Peer '{new_peer}' added.")
+                    try:
+                        requests.post(f"{target_peer}/peers/add", json={"address": local_node}, timeout=3)
+                        st.success(f"✓ Mutual connection established: {local_node} ⟷ {target_peer}")
+                    except Exception:
+                        st.warning(f"Added {target_peer} locally, but the remote node didn't respond to the mutual handshake. Is it online?")
                     st.rerun()
 
     with col_sync:
