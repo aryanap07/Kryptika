@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "kryptika"
-version         = "1.1.0"
-description     = "A complete blockchain implementation in pure Python — SHA-256 block hashing, Proof of Work consensus, ECDSA P-256 signed transactions, live P2P networking, SQLite persistence, and a thread-safe REST node. One dependency. No frameworks."
+version         = "1.2.0"
+description     = "Blockchain, stripped to its essence in Python."
 readme          = "README.md"
 license         = { file = "LICENSE" }
 requires-python = ">=3.10"
@@ -16,6 +16,9 @@ authors = [
 
 dependencies = [
     "cryptography>=41.0",
+    "requests>=2.31",
+    "streamlit>=1.35",
+    "plotly>=5.20",
 ]
 
 keywords = [
