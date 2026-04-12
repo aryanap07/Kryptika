@@ -95,10 +95,10 @@ html, body, [class*="css"], .stApp { font-family: var(--mono); background: var(-
 .wcard-unit { font-size: 0.8rem; color: var(--txt-4); margin-left: 6px; font-weight: 500; }
 
 .sbox { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 20px; margin: 16px 0; }
-.srow { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+.srow { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; gap: 12px; }
 .srow:last-child { border-bottom: none; font-weight: 700; color: var(--txt-1); }
-.skey { color: var(--txt-3); font-weight: 500; flex-shrink: 0; margin-right: 12px; }
-.sval { color: var(--txt-1); text-align: right; font-size: 0.75rem; font-weight: 600; word-break: break-all; overflow-wrap: break-word; max-width: 70%; }
+.skey { color: var(--txt-3); font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+.sval { color: var(--txt-1); text-align: right; font-size: 0.8rem; font-weight: 600; word-break: break-all; overflow-wrap: break-word; }
 
 .rbox { background: var(--green-dim); border: 1px solid rgba(16,185,129,0.2); border-radius: var(--r); padding: 18px 20px; margin-top: 16px; }
 .rrow { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.8rem; }
@@ -478,8 +478,6 @@ elif page == "Chain Explorer":
             filtered = [b for b in filtered if str(b.get("index")) == s or s in b.get("hash", "").lower()]
             if not filtered: st.warning("No blocks matched.")
 
-        st.markdown('<div class="col-hdr b"><span>Index</span><span>Hash</span><span style="text-align:center">Txs</span><span style="text-align:right">Nonce</span><span style="text-align:right">Time</span></div>', unsafe_allow_html=True)
-
         for i, block in enumerate(filtered[:100]): 
             idx   = block.get("index", "?")
             bh    = block.get("hash", "---")
@@ -704,10 +702,10 @@ elif page == "Send":
         bal_data, bal_err = api("GET", f"/balance/{sender_w['address']}")
         avail = float(bal_data.get("balance", 0)) if not bal_err else 0.0
 
-        recipient = st.text_input("Recipient address", value=st.session_state.send_to_ui, placeholder="64-character hex", key="send_to_ui")
+        recipient = st.text_input("Recipient address", placeholder="64-character hex", key="send_to_ui")
         amount    = st.number_input("Amount (KRY)", min_value=0.00000001, value=float(st.session_state.send_amt_ui), step=0.1, format="%.8f", key="send_amt_ui")
         fee       = st.number_input("Fee (KRY)", min_value=0.0, value=float(st.session_state.send_fee_ui), step=0.01, format="%.8f", key="send_fee_ui")
-        note      = st.text_input("Note (optional)", value=st.session_state.send_note_ui, placeholder="what is this for?", key="send_note_ui").strip()
+        note      = st.text_input("Note (optional)", placeholder="what is this for?", key="send_note_ui").strip()
 
     with col_info:
         st.markdown('<div class="sh">Transaction Summary</div>', unsafe_allow_html=True)
@@ -754,11 +752,6 @@ elif page == "Send":
                     st.session_state.last_tx_id = tx.tx_id
                     st.success("Transaction broadcast to node!")
                     st.markdown(f'<div class="hash-box" style="font-size:0.65rem;">TX ID: {tx.tx_id}</div>', unsafe_allow_html=True)
-                    st.session_state.send_to_ui = ""
-                    st.session_state.send_amt_ui = 1.0
-                    st.session_state.send_fee_ui = 0.2
-                    st.session_state.send_note_ui = ""
-                    st.rerun()
             except Exception as exc:
                 st.error(f"Signing failed: {exc}")
 
@@ -931,7 +924,8 @@ elif page == "Chain Validator":
                         if i > 0:
                             prev_hash = blocks[i-1].get("hash", "")
                             if block.get("prev_hash") != prev_hash: issues.append(f"Block #{block.get('index','?')}: broken link")
-                        diff = status_data.get("difficulty", 2) if not status_err else 2
+                        _status, _serr = api("GET", "/status")
+                        diff = _status.get("difficulty", 2) if not _serr else 2
                         if not stored.startswith("0" * int(diff)): issues.append(f"Block #{block.get('index','?')}: PoW invalid")
 
                     if issues:
