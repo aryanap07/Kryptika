@@ -859,23 +859,44 @@ elif page == "Peers":
     col_add, col_sync = st.columns(2)
 
     with col_add:
-        new_peer = st.text_input("Add peer address", placeholder="http://localhost:5001", key="new_peer")
+        new_peer = st.text_input("Add peer address", placeholder="localhost:5001", key="new_peer")
         if st.button("Add Peer", key="btn_add_peer"):
             target_peer = new_peer.strip()
             if not target_peer: st.error("Enter an address.")
             else:
-                if not target_peer.startswith("http"): target_peer = "http://" + target_peer
-                target_peer = target_peer.rstrip("/")
-                local_node = st.session_state.node_url
+                # Normalise to a full URL for HTTP calls, and a bare
+                # host:port for storage inside the node.  node.py's
+                # broadcast helpers prepend "http://" themselves, so
+                # storing "http://..." would produce a double-prefix.
+                if not target_peer.startswith("http"):
+                    target_peer = "http://" + target_peer
+                target_peer    = target_peer.rstrip("/")
+                local_node     = st.session_state.node_url.rstrip("/")
 
-                result, err = api("POST", "/peers/add", {"address": target_peer})
-                if err: st.error(f"Local addition failed: {err}")
+                # Addresses as the nodes will store them (no scheme)
+                target_peer_addr = target_peer.split("://", 1)[-1]
+                local_node_addr  = local_node.split("://", 1)[-1]
+
+                # Direction 1: tell local node to register the remote peer
+                result, err = api("POST", "/peers/add", {"address": target_peer_addr})
+                if err:
+                    st.error(f"Local addition failed: {err}")
                 else:
+                    # Direction 2: tell remote node to register local node back
                     try:
-                        requests.post(f"{target_peer}/peers/add", json={"address": local_node}, timeout=3)
-                        st.success(f"✓ Mutual connection established: {local_node} ⟷ {target_peer}")
+                        resp = requests.post(
+                            f"{target_peer}/peers/add",
+                            json={"address": local_node_addr},
+                            timeout=3,
+                        )
+                        resp.raise_for_status()
+                        st.success(f"✓ Bidirectional connection established: {local_node_addr} ⟷ {target_peer_addr}")
                     except Exception:
-                        st.warning(f"Added {target_peer} locally, but the remote node didn't respond to the mutual handshake. Is it online?")
+                        st.warning(
+                            f"Registered {target_peer_addr} on this node (→), but "
+                            f"{target_peer_addr} did not register this node back (←). "
+                            f"Is the remote node online?"
+                        )
                     st.rerun()
 
     with col_sync:
