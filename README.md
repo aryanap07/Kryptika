@@ -29,7 +29,7 @@
 
 ## What is Kryptika?
 
-Kryptika is a complete, working blockchain written entirely in pure Python. It covers the full stack — SHA-256 hashing, Proof of Work mining, ECDSA-signed transactions, live peer-to-peer networking, SQLite persistence, and a thread-safe HTTP node. Every primitive is hand-written and meant to be read.
+Kryptika is a complete, working blockchain written entirely in pure Python. It covers the full stack — SHA-256 hashing, Proof of Work mining, ECDSA-signed transactions, live peer-to-peer networking, SQLite persistence, and a thread-safe HTTP node.
 
 It's for developers who want to stop wondering how blockchains work and just *see* it happen. Clone it, run it, break it, read the source.
 
