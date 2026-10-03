@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name            = "kryptika"
-version         = "1.2.0"
+version         = "1.2.1"
 description     = "Blockchain, stripped to its essence in Python."
 readme          = "README.md"
 license         = { file = "LICENSE" }
