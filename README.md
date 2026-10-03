@@ -16,7 +16,7 @@
 <br/>
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Version](https://img.shields.io/badge/Version-1.2.0-6C63FF?style=for-the-badge)](https://github.com/aryanap07/Kryptika)
+[![Version](https://img.shields.io/badge/Version-1.2.1-6C63FF?style=for-the-badge)](https://github.com/aryanap07/Kryptika)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
 
 </div>
@@ -35,7 +35,7 @@ It's for developers who want to stop wondering how blockchains work and just *se
 
 ---
 
-## What's New in v1.2.0
+## What's New!
 
 - **Streamlit Dashboard** — a browser-based GUI covering everything the CLI can do, plus live Plotly charts and a visual chain explorer. Launch with `streamlit run dashboard.py`.
 - **Transaction Notes** — every transaction now accepts an optional `note` field, stored alongside the transaction and visible in the dashboard, CLI, and history API.
