@@ -11,7 +11,11 @@ license         = { file = "LICENSE" }
 requires-python = ">=3.10"
 
 authors = [
-    { name = "Kryptika Contributors" },
+    { name = "Aryan Patel" },
+]
+
+maintainers = [
+    { name = "Doordarshan Contributors" },
 ]
 
 dependencies = [
